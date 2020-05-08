@@ -1,0 +1,78 @@
+--- #-------------------------------------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------------------------------------
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License. See https://go.microsoft.com/fwlink/?linkid=2090316 for license information.
+version: "3.1"
+services:
+  mongoservice:
+    image: mongo
+    env_file:
+      - ./db.env
+    # environment:
+    #   - MONGO_INITDB_ROOT_USERNAME=adminuser
+    #   - MONGO_INITDB_ROOT_PASSWORD=adminpassword
+    #   - MONGO_INITDB_USERNAME=user
+    #   - MONGO_INITDB_PASSWORD=password
+    #   - MONGO_INITDB_DATABASE=collection
+    ports:
+      - "27017:27017"
+    # expose:
+    #   - "27017"
+    # command: --noauth --replSet "rs0" --bind_ip 0.0.0.0 # --httpinterface is deprecated starting 3.6
+    # command: [--auth]
+    volumes:
+      # init script only runs so long as there is no data in the /data/db/folder
+      # - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
+      - mongo_db_data:/data/db
+      # ../data/db:/data/db
+      # mongodb doesnt support virtual shared folders(which is what happens for docker windows) so
+      # this wont work, instead using the docker volume system is used
+  # mongo_express:
+  #   image: mongo-express
+  #   restart: always
+  #   mem_limit: "512m"
+  #   environment:
+  #     - ME_CONFIG_OPTIONS_EDITORTHEME=ambiance
+  #     - ME_CONFIG_MONGODB_SERVER=mongoservice
+  #     - ME_CONFIG_MONGODB_AUTH_DATABASE=collection
+  #     - ME_CONFIG_MONGODB_AUTH_USERNAME=adminuser
+  #     - ME_CONFIG_MONGODB_AUTH_PASSWORD=adminpassword
+  #   labels:
+  #     - triton.cns.services=mongo-express
+  #   network_mode: bridge
+  #   depends_on:
+  #     - mongoservice
+  #   ports:
+  #     - 8081
+  node_environment:
+    # Uncomment the next line to use a non-root user for all processes. You can also
+    # simply use the "remoteUser" property in devcontainer.json if you just want VS Code
+    # and its sub-processes (terminals, tasks, debugging) to execute as the user. On Linux,
+    # you may need to update USER_UID and USER_GID in .devcontainer/Dockerfile to match your
+    # user if not 1000. See https://aka.ms/vscode-remote/containers/non-root for details.
+    # user: node
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    env_file:
+      - ./db.env
+      - ./node.env
+
+    depends_on:
+      - mongoservice
+
+    volumes:
+      - ..:/workspace:cached
+
+    ports:
+      - "3000:3000"
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+volumes:
+  mongo_db_data:
